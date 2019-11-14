@@ -2,7 +2,7 @@
 """
 Created on Mon Oct 14 14:08:49 2019
 
-@author: chidd
+@author: Chiddy Umeano
 """
 import numpy as np
 from scipy import special

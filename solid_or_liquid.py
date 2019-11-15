@@ -40,9 +40,11 @@ def find_vector(a,b,L):
 def find_param(coords,l,L,d):    
     myrange=range(-l,l+1)
     param = []
+    neighbours = []
     #find parameter for each particle a
     for i, a in enumerate(coords):
         sph_harm=[]
+        n=[]
         #loop over all particles b for each particle a
         for j, b in enumerate(coords):
             #if a==b, don't use particle b 
@@ -51,7 +53,9 @@ def find_param(coords,l,L,d):
                 r=find_vector(a,b,L)
 
                 #check if particle b is nearest neighbour to a
-                if np.dot(r,r)<=d**2:        
+                if np.dot(r,r)<=d**2:
+                    #append nearest neighbours to new list
+                    n.append(j)
                     #construct spherical harmonic
                     theta = np.arctan2(r[1],r[0])
                     phi = np.arccos(r[2]/np.linalg.norm(r))               
@@ -61,6 +65,8 @@ def find_param(coords,l,L,d):
                     sph_harm.append(new_vec)
                 
         #find parameter for particle a and append to parameters list
+        #append all neighbours to new list
+        neighbours.append(n)
         total = sum(sph_harm)
         N=len(sph_harm)
         p = total/N
@@ -70,7 +76,7 @@ def find_param(coords,l,L,d):
     #write parameters to seperate file to be used for machine learning
     with open('sp.txt','ab') as file:
         pickle.dump(param,file)
-    return param
+    return param, neighbours
 
 
 #function to normalise parameters and returns as array of arrays
@@ -83,25 +89,17 @@ def norm_param(param):
 #function to count number of solid-like particles in each configuration
 #takes in normalised parameters, coordinates, length of box L
 #cutoff distance d, connection threshold c and threshold value t
-def state_classify(norm_par,coords,L,d,c,t):
+def state_classify(norm_par,neighbours,L,d,c,t):
     solid_count = 0
     for i, a in enumerate(norm_par):
-        coorda = coords[i]
-        j=0
+        n = neighbours[i]
         con_count = 0
-        for j, b in enumerate(norm_par):
-            coordb = coords[j]
-            if i!=j:
-                #apply 2 conditions - on dot product of parameters 
-                # and on distance between particles a and b
-                r= find_vector(coorda, coordb,L)
-                dist = np.dot(r,r)
-                #if a and b are both connected and nearest neighbours
-                #add 1 to connection count
-                if dist<=d**2:
-                    dotp = np.vdot(a,b)
-                    if dotp>c:
-                        con_count +=1
+        #only loop over neighbouring particles
+        for f, g in enumerate(n):
+            b = norm_par[g]
+            dotp = np.vdot(a,b)
+            if dotp>c:
+                con_count +=1
         #if >7 connections, add 1 to no. of solid-like particles in config
         if con_count>t:
             solid_count +=1
@@ -131,16 +129,16 @@ def sol_or_liq(file,l,L,d,c,t):
             coordinates.append(np.array([float(x), float(y), float(z)]))
             if len(coordinates)==n_atoms:
                 break
-        parameters = find_param(coordinates,l,L,d)
+        parameters, neighbours = find_param(coordinates,l,L,d)
         normal = norm_param(parameters)
-        sl = state_classify(normal,coordinates,L,d,c,t)
+        sl = state_classify(normal,neighbours,L,d,c,t)
         print('Processed configuration {}. Timestamp = {}'.format(j, comment))
         a.append(sl)
         j+=1
     xyz.close()
     return a
 
-print(sol_or_liq("solid.xyz",l,L,d,c,t))
+print(sol_or_liq("liquid.xyz",l,L,d,c,t))
 
     
    

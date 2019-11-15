@@ -2,7 +2,7 @@
 """
 Created on Mon Oct 14 14:08:49 2019
 
-@author: Chiddy Umeano
+@author: chidd
 """
 import numpy as np
 from scipy import special
@@ -38,17 +38,13 @@ def find_vector(a,b,L):
 #takes in coords, l quantum number, L (length of box),rec = 1/L
 #and cut-off distance for nearest-neighbour bonds d
 def find_param(coords,l,L,d):    
-    i=0
     myrange=range(-l,l+1)
     param = []
     #find parameter for each particle a
-    while i < len(coords):    
-        a = coords[i]
-        j=0
+    for i, a in enumerate(coords):
         sph_harm=[]
         #loop over all particles b for each particle a
-        while j < len(coords):
-            b = coords[j]
+        for j, b in enumerate(coords):
             #if a==b, don't use particle b 
             if i!=j:
                     
@@ -63,31 +59,16 @@ def find_param(coords,l,L,d):
                     
                     #append spherical harmonic to new list and carry on loop
                     sph_harm.append(new_vec)
-                    j+=1
-                    if j>= len(coords):
-                        break
-                    b=coords[j]
-        
-                else:
-
-                    j+=1
-                    if j>= len(coords):
-                        break
-                    b=coords[j]
-            else:
-                j+=1
-                if j>= len(coords):
-                    break
-                b=coords[j]
                 
-        #find parameter for particle a
+        #find parameter for particle a and append to parameters list
         total = sum(sph_harm)
         N=len(sph_harm)
         p = total/N
         P=p.tolist()
         param.append(P)
-        i+=1
-    with open('s.txt','ab') as file:
+
+    #write parameters to seperate file to be used for machine learning
+    with open('sp.txt','ab') as file:
         pickle.dump(param,file)
     return param
 
@@ -103,15 +84,12 @@ def norm_param(param):
 #takes in normalised parameters, coordinates, length of box L
 #cutoff distance d, connection threshold c and threshold value t
 def state_classify(norm_par,coords,L,d,c,t):
-    i=0
     solid_count = 0
-    while i<len(norm_par):
-        a = norm_par[i]
+    for i, a in enumerate(norm_par):
         coorda = coords[i]
         j=0
         con_count = 0
-        while j<len(norm_par):
-            b = norm_par[j]
+        for j, b in enumerate(norm_par):
             coordb = coords[j]
             if i!=j:
                 #apply 2 conditions - on dot product of parameters 
@@ -124,35 +102,9 @@ def state_classify(norm_par,coords,L,d,c,t):
                     dotp = np.vdot(a,b)
                     if dotp>c:
                         con_count +=1
-                        j+=1
-                        if j>=len(norm_par):
-                            break
-                        b = norm_par[j]
-                        coordb = coords[j]
-                    else:
-                        j+=1
-                        if j>=len(norm_par):
-                            break
-                        b = norm_par[j]
-                        coordb = coords[j]
-                else:
-                    j+=1
-                    if j>=len(norm_par):
-                        break
-                    b = norm_par[j]
-                    coordb = coords[j]
-            else:
-                j+=1
-                if j>=len(norm_par):
-                        break
-                b = norm_par[j]
-                coordb = coords[j]
         #if >7 connections, add 1 to no. of solid-like particles in config
         if con_count>t:
             solid_count +=1
-            i+=1
-        else:
-            i+=1
     return solid_count
 
 
@@ -172,14 +124,12 @@ def sol_or_liq(file,l,L,d,c,t):
             print("End of file reached")
             break
         
-        i = 0
         comment = xyz.readline()
         for line in xyz:
             atom,x,y,z = line.split()
             atoms.append(atom)
             coordinates.append(np.array([float(x), float(y), float(z)]))
-            i+=1
-            if i==n_atoms:
+            if len(coordinates)==n_atoms:
                 break
         parameters = find_param(coordinates,l,L,d)
         normal = norm_param(parameters)
@@ -190,7 +140,7 @@ def sol_or_liq(file,l,L,d,c,t):
     xyz.close()
     return a
 
-print(sol_or_liq("liquid.xyz",l,L,d,c,t))
+print(sol_or_liq("solid.xyz",l,L,d,c,t))
 
     
    

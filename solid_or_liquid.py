@@ -7,6 +7,9 @@ Created on Mon Oct 14 14:08:49 2019
 import numpy as np
 from scipy import special
 import pickle
+import time
+from mayavi import mlab
+
 
 #Constants that can be changed. 
 #L = length of box (periodic boundary conditions)
@@ -74,7 +77,7 @@ def find_param(coords,l,L,d):
         param.append(P)
 
     #write parameters to seperate file to be used for machine learning
-    with open('sp.txt','ab') as file:
+    with open('l.txt','ab') as file:
         pickle.dump(param,file)
     return param, neighbours
 
@@ -89,8 +92,10 @@ def norm_param(param):
 #function to count number of solid-like particles in each configuration
 #takes in normalised parameters, coordinates, length of box L
 #cutoff distance d, connection threshold c and threshold value t
-def state_classify(norm_par,neighbours,L,d,c,t):
+def state_classify(norm_par,coordinates,neighbours,L,d,c,t):
     solid_count = 0
+    solid_coords=[]
+    liquid_coords=[]
     for i, a in enumerate(norm_par):
         n = neighbours[i]
         con_count = 0
@@ -103,7 +108,10 @@ def state_classify(norm_par,neighbours,L,d,c,t):
         #if >7 connections, add 1 to no. of solid-like particles in config
         if con_count>t:
             solid_count +=1
-    return solid_count
+            solid_coords.append(coordinates[i])
+        else:
+            liquid_coords.append(coordinates[i])
+    return solid_count,solid_coords,liquid_coords
 
 
 #function which takes in files and some parameters,
@@ -113,7 +121,7 @@ def sol_or_liq(file,l,L,d,c,t):
     a =[]
     xyz = open(file)
     #loop over all 101 configurations
-    while True:
+    while j<=2:
         atoms = []
         coordinates = []
         try:
@@ -123,6 +131,7 @@ def sol_or_liq(file,l,L,d,c,t):
             break
         
         comment = xyz.readline()
+        #read through files and puts coordinates into array
         for line in xyz:
             atom,x,y,z = line.split()
             atoms.append(atom)
@@ -131,8 +140,30 @@ def sol_or_liq(file,l,L,d,c,t):
                 break
         parameters, neighbours = find_param(coordinates,l,L,d)
         normal = norm_param(parameters)
-        sl = state_classify(normal,neighbours,L,d,c,t)
+        sl, solid_c, liquid_c = state_classify(normal,coordinates,neighbours,L,d,c,t)
+        #split coordinates array into solid x,y,z and liquid x,y,z lists
+        solid_x=[]
+        solid_y=[]
+        solid_z=[]
+        for e,f,g in solid_c:
+            solid_x.append(e)
+            solid_y.append(f)
+            solid_z.append(g)
+        liquid_x=[]
+        liquid_y=[]
+        liquid_z=[]
+        for m,n,o in liquid_c:
+            liquid_x.append(m)
+            liquid_y.append(n)
+            liquid_z.append(o)
+        #plot cubes, solid in 1 colour, liquid in another colour,with a cube of length L around it to mark boundaries
+        mlab.points3d([L/2],[L/2],[L/2],mode='cube',scale_factor=L,opacity=0.3,color=(0,0,0))    
+        mlab.points3d(solid_x, solid_y, solid_z, scale_factor=1.0,color=(1,0,0), mode='sphere',resolution=12,opacity=1.0)
+        mlab.points3d(liquid_x, liquid_y, liquid_z, scale_factor=1.0,color=(0,0,1), mode='sphere',resolution=12,opacity=1.0)
+        #save snapshot of scene
+        mlab.savefig('snapshot{}.png'.format(j),magnification=5)
         print('Processed configuration {}. Timestamp = {}'.format(j, comment))
+        mlab.show()
         a.append(sl)
         j+=1
     xyz.close()

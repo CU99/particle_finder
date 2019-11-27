@@ -156,7 +156,7 @@ def sol_or_liq(file,l,L,d,c,t):
             liquid_x.append(m)
             liquid_y.append(n)
             liquid_z.append(o)
-        #plot cubes, solid in 1 colour, liquid in another colour,with a cube of length L around it to mark boundaries
+        #plot cubes, solid in 1 colour, liquid in another colour,with a cube of length L around it to mark boundaries 
         mlab.points3d([L/2],[L/2],[L/2],mode='cube',scale_factor=L,opacity=0.3,color=(0,0,0))    
         mlab.points3d(solid_x, solid_y, solid_z, scale_factor=1.0,color=(1,0,0), mode='sphere',resolution=12,opacity=1.0)
         mlab.points3d(liquid_x, liquid_y, liquid_z, scale_factor=1.0,color=(0,0,1), mode='sphere',resolution=12,opacity=1.0)

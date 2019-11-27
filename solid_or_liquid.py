@@ -121,7 +121,7 @@ def sol_or_liq(file,l,L,d,c,t):
     a =[]
     xyz = open(file)
     #loop over all 101 configurations
-    while j<=2:
+    while True:
         atoms = []
         coordinates = []
         try:

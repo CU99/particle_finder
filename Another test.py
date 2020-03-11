@@ -169,7 +169,7 @@ def sol_or_liq(file,l,L,d,c,t):
 classification, coordinates = sol_or_liq("liquid.xyz",l,L,d,c,t)
 print(classification)
 
-
+#function to produce an animation of Mayavi plots
 @mlab.animate(delay=1000)
 def anim():
     splot = mlab.points3d(np.ones(500),np.ones(500),np.ones(500),scale_factor=1.0,color=(1,0,0), mode='sphere',resolution=12,opacity=1.0)    

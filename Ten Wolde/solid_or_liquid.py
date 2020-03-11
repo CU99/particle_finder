@@ -11,20 +11,23 @@ import time
 from mayavi import mlab
 
 
+
 #Constants that can be changed. 
 #L = length of box (periodic boundary conditions)
-#rec = 1/L
 #l = orbital quantum number, d = cutoff distance for nearest neighbour atoms
 #c = threshold for 2 particles to be considered 'connected'
 #t = threshold value for number of connections for solid-like particle
-L = 7.93701
+#rho = density
+
+rho = 1
+L = 7.93701/(rho**(1/3))
 l = 6
-d = 1.5
+d = 1.5/(rho**(1/3))
 c = 0.5
 t = 7
 
 
-#function to find vector between 2 co-ordinates a and b, length of box L,rec 1/L
+#function to find vector between 2 co-ordinates a and b, length of box L
 def find_vector(a,b,L):
     c=b-a
         
@@ -38,7 +41,7 @@ def find_vector(a,b,L):
 
 
 #function to find list of parameters for this configuration of coordinates
-#takes in coords, l quantum number, L (length of box),rec = 1/L
+#takes in coords, l quantum number, L (length of box)
 #and cut-off distance for nearest-neighbour bonds d
 def find_param(coords,l,L,d):    
     myrange=range(-l,l+1)
@@ -77,10 +80,9 @@ def find_param(coords,l,L,d):
         param.append(P)
 
     #write parameters to seperate file to be used for machine learning
-    with open('l.txt','ab') as file:
+    with open('liquidT1.8.txt','ab') as file:
         pickle.dump(param,file)
     return param, neighbours
-
 
 #function to normalise parameters and returns as array of arrays
 def norm_param(param):
@@ -92,7 +94,7 @@ def norm_param(param):
 #function to count number of solid-like particles in each configuration
 #takes in normalised parameters, coordinates, length of box L
 #cutoff distance d, connection threshold c and threshold value t
-def state_classify(norm_par,coordinates,neighbours,L,d,c,t):
+def state_classify(norm_par,coordinates,neighbours,c,t):
     solid_count = 0
     solid_coords=[]
     liquid_coords=[]
@@ -117,6 +119,8 @@ def state_classify(norm_par,coordinates,neighbours,L,d,c,t):
 #function which takes in files and some parameters,
 #and outputs number of solid-like particles in each configuration
 def sol_or_liq(file,l,L,d,c,t):
+    total_descriptor_time=0
+    total_class_time =0
     j=1
     a =[]
     xyz = open(file)
@@ -138,9 +142,18 @@ def sol_or_liq(file,l,L,d,c,t):
             coordinates.append(np.array([float(x), float(y), float(z)]))
             if len(coordinates)==n_atoms:
                 break
+        s1=time.time()
         parameters, neighbours = find_param(coordinates,l,L,d)
+        #descriptors = create_desc(parameters)
+        e1=time.time()
+        t1=e1-s1
+        total_descriptor_time+=t1
+        s2 = time.time()
         normal = norm_param(parameters)
-        sl, solid_c, liquid_c = state_classify(normal,coordinates,neighbours,L,d,c,t)
+        sl, solid_c, liquid_c = state_classify(normal,coordinates,neighbours,c,t)
+        e2 = time.time()
+        t2 = e2-s2
+        total_class_time+=t2
         #split coordinates array into solid x,y,z and liquid x,y,z lists
         solid_x=[]
         solid_y=[]
@@ -156,26 +169,28 @@ def sol_or_liq(file,l,L,d,c,t):
             liquid_x.append(m)
             liquid_y.append(n)
             liquid_z.append(o)
-        #plot cubes, solid in 1 colour, liquid in another colour,with a cube of length L around it to mark boundaries 
-        mlab.points3d([L/2],[L/2],[L/2],mode='cube',scale_factor=L,opacity=0.3,color=(0,0,0))    
+        #plot cubes, solid in 1 colour, liquid in another colour,with a cube of length L around it to mark boundaries
+        mlab.points3d([L/2],[L/2],[L/2],mode='cube',scale_factor=L,opacity=0.2,color=(1,1,1))    
         mlab.points3d(solid_x, solid_y, solid_z, scale_factor=1.0,color=(1,0,0), mode='sphere',resolution=12,opacity=1.0)
         mlab.points3d(liquid_x, liquid_y, liquid_z, scale_factor=1.0,color=(0,0,1), mode='sphere',resolution=12,opacity=1.0)
         #save snapshot of scene
-        mlab.savefig('snapshot{}.png'.format(j),magnification=5)
+        mlab.savefig('snapshotliquid{}.png'.format(j),magnification=5)
         print('Processed configuration {}. Timestamp = {}'.format(j, comment))
         mlab.show()
         a.append(sl)
         j+=1
     xyz.close()
+    print('Total time to constructs descriptors = {} s. Total time to make predictions = {} s.'.format(total_descriptor_time,total_class_time))
+    print('% particles classified correctly/incorrectly = {}'.format((sum(a)/50500)*100))
+    print('Minimum number of solid-like particles in a config = {}. Maximum = {}'.format(min(a),max(a)))
     return a
+
 
 print(sol_or_liq("liquid.xyz",l,L,d,c,t))
 
     
    
-        
-        
-    
+
         
 
 
